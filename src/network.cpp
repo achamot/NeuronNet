@@ -1,6 +1,7 @@
 #include "network.h"
 #include "random.h"
 
+
 void Network::resize(const size_t &n, double inhib) {
     size_t old = size();
     neurons.resize(n);
@@ -62,6 +63,46 @@ size_t Network::random_connect(const double &mean_deg, const double &mean_streng
     return num_links;
 }
 
+
+std::pair<size_t, double> Network::degree(const size_t& s) const
+{
+	std::vector<std::pair<size_t, double> > neighbors_( neighbors(s) );
+	
+	std::pair<size_t, double> degree_( { neighbors_.size() , 0. } );
+	
+	for (auto n : neighbors_ ) {
+		degree_.second += n.second;
+		
+	}
+		
+	return degree_;
+}
+
+
+
+std::vector<std::pair<size_t, double> > Network::neighbors(const size_t& s) const
+{
+	std::vector<std::pair<size_t, double> > neighbors_;
+	
+	//iteration sur les éléments de links qui on déjà s comme premier indice de la paire 
+	for (std::map< std::pair<size_t, size_t>, double >:: const_iterator i=links.lower_bound({ s, 0});
+									 i != links.end() and (i->first).first ==s  ;  ++i )         {
+		neighbors_.push_back( { (i->first).second, i->second } ); // { deuxième indice de la paire correspondant au neurone lié au neurone d'indice s ; valeur de l'intensité du lien }
+	}
+		
+	
+	
+	/*
+	for (auto link : links) {
+		if ( (link.first).first == s ) {
+			neighbors_.push_back({ (link.first).second , link.second });// deuxieme ele de la paire et valeur de lintensité
+		
+		}
+	}
+	*/
+	return neighbors_;
+}
+
 std::vector<double> Network::potentials() const {
     std::vector<double> vals;
     for (size_t nn=0; nn<size(); nn++)
@@ -75,6 +116,56 @@ std::vector<double> Network::recoveries() const {
         vals.push_back(neurons[nn].recovery());
     return vals;
 }
+
+
+std::set<size_t> Network::step(const std::vector<double>& res)
+{
+	
+	std::set<size_t> firing_ones;
+	
+	for (std::size_t i(0); i< neurons.size() ; ++i) {
+		if ( neurons[i].firing() ) {
+			firing_ones.insert(i);
+			neurons[i].reset();
+		}
+	}
+	
+	for (std::size_t i(0); i< neurons.size() ; ++i) { 
+		double intensity(0);
+		
+		std::vector<std::pair<size_t, double> > neighbors_(neighbors(i));
+		double exit_neighbors_neurones; 
+		double inhib_neighbors_neurones;
+	
+		for (auto  n_ : neighbors_) {
+			if (firing_ones.count(n_.first)) { 
+				if (neurons[n_.first].is_inhibitory()) {
+					inhib_neighbors_neurones += n_.second;
+				}
+				else {
+					exit_neighbors_neurones += n_.second;
+				}
+			}
+		}
+		
+		double w;
+		if (neurons[i].is_inhibitory()) {
+			w=0.4;
+		}
+		else {
+			w=1;
+		}
+		
+		intensity = w *res[i] + 0.5 * exit_neighbors_neurones + inhib_neighbors_neurones ;
+		
+		neurons[i].input(intensity);
+		neurons[i].Neuron::step();
+			
+	}
+	
+	return firing_ones;
+}
+
 
 void Network::print_params(std::ostream *_out) {
     (*_out) << "Type\ta\tb\tc\td\tInhibitory\tdegree\tvalence" << std::endl;

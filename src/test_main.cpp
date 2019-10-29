@@ -86,8 +86,8 @@ TEST(networkTest, connect) {
 // --- should fire once within 10 time steps
     for (size_t t=0; t<10; t++) {
         net.step(noisev);
-        ifirs += (int)net.neuron(inhib1).firing();
-        efirs += (int)net.neuron(excit_idx).firing();
+        ifirs += (int)net.neuron(inhib1).firing();/////////////////////////
+        efirs += (int)net.neuron(excit_idx).firing();////////////////////////////
     }
     EXPECT_EQ(1, ifirs);
     EXPECT_EQ(1, efirs);
