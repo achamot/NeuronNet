@@ -130,33 +130,30 @@ std::set<size_t> Network::step(const std::vector<double>& res)
 		}
 	}
 	
+	double intensity(0);
+	double w;
+	
 	for (std::size_t i(0); i< neurons.size() ; ++i) { 
-		double intensity(0);
+		
+		intensity=0;
+		w=1;
+		if (neurons[i].is_inhibitory()) {
+			w=0.4;
+		}
+		intensity += (w * res[i]);
 		
 		std::vector<std::pair<size_t, double> > neighbors_(neighbors(i));
-		double exit_neighbors_neurones; 
-		double inhib_neighbors_neurones;
 	
 		for (auto  n_ : neighbors_) {
 			if (firing_ones.count(n_.first)) { 
 				if (neurons[n_.first].is_inhibitory()) {
-					inhib_neighbors_neurones += n_.second;
+					intensity += n_.second;
 				}
 				else {
-					exit_neighbors_neurones += n_.second;
+					intensity += 0.5 * n_.second;
 				}
 			}
 		}
-		
-		double w;
-		if (neurons[i].is_inhibitory()) {
-			w=0.4;
-		}
-		else {
-			w=1;
-		}
-		
-		intensity = w *res[i] + 0.5 * exit_neighbors_neurones + inhib_neighbors_neurones ;
 		
 		neurons[i].input(intensity);
 		neurons[i].Neuron::step();
